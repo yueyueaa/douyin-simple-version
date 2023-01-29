@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/gavv/httpexpect/v2 v2.8.0
 	github.com/gin-gonic/gin v1.7.7
+	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/stretchr/testify v1.7.0
 )
 
