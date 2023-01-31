@@ -98,7 +98,7 @@ func Insert(username string, password string, userIdSequence int64) (err error) 
 	}
 	return nil
 }
-func Query_token(str string) (err error) { // 查找token是否存在
+func Query_token(str string) (user User, err error) { // 查找token是否存在
 	db, err := InitDB() // 初始化数据库
 
 	if err != nil {
@@ -107,11 +107,11 @@ func Query_token(str string) (err error) { // 查找token是否存在
 	}
 	defer db.Close()
 
-	sqlStr := "select token from user where token=?" //构造查询的sql语句
+	sqlStr := "select ID, name, follow_num, fans_num, token from user where token=?" //构造查询的sql语句
 
 	var tem string
 
-	err = db.QueryRow(sqlStr, str).Scan(&tem)
+	err = db.QueryRow(sqlStr, str).Scan(&user.Id,&user.Name,&user.FollowCount,&user.FollowerCount, &tem)
 
-	return err
+	return user, err
 }

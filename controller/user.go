@@ -81,7 +81,10 @@ func Login(c *gin.Context) {
 
 func UserInfo(c *gin.Context) {
 	token := c.Query("token")
-	err := Query_token(token)
+
+	var user User
+
+	user, err := Query_token(token)
 	if err != nil {
 		c.JSON(http.StatusOK, UserResponse{
 			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
@@ -89,6 +92,7 @@ func UserInfo(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, UserResponse{
 			Response: Response{StatusCode: 0},
+			User : user,
 		})
 	}
 }
