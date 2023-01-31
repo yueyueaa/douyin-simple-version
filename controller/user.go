@@ -1,9 +1,10 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
-	"sync/atomic"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // usersLoginInfo use map to store user info, and key is username+password for demo
@@ -34,21 +35,23 @@ type UserResponse struct {
 
 func Register(c *gin.Context) {
 	username := c.Query("username")
-	password := c.Query("password")
+	password := c.Query("password") // 读取用户给定的账号密码
 
-	token := username + password
+	err := Query_account(username)
 
-	if _, exist := usersLoginInfo[token]; exist {
+	if err == nil { //用户已经存在的情况
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 1, StatusMsg: "User already exist"},
 		})
 	} else {
-		atomic.AddInt64(&userIdSequence, 1)
-		newUser := User{
-			Id:   userIdSequence,
-			Name: username,
+		err = Insert(username, password, userIdSequence)
+		if err != nil { // 注册失败
+			c.JSON(http.StatusOK, UserLoginResponse{
+				Response: Response{StatusCode: 1, StatusMsg: "Register Fail"},
+			})
+			return
 		}
-		usersLoginInfo[token] = newUser
+		//注册完成
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 0},
 			UserId:   userIdSequence,
@@ -63,10 +66,10 @@ func Login(c *gin.Context) {
 
 	token := username + password
 
-	if user, exist := usersLoginInfo[token]; exist {
+	if exist, userid := QuerytoLogin(username, password); exist {
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 0},
-			UserId:   user.Id,
+			UserId:   userid,
 			Token:    token,
 		})
 	} else {
@@ -79,14 +82,17 @@ func Login(c *gin.Context) {
 func UserInfo(c *gin.Context) {
 	token := c.Query("token")
 
-	if user, exist := usersLoginInfo[token]; exist {
+	var user User
+
+	user, err := Query_token(token)
+	if err != nil {
 		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 0},
-			User:     user,
+			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
 		})
 	} else {
 		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
+			Response: Response{StatusCode: 0},
+			User : user,
 		})
 	}
 }
