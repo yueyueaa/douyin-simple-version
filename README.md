@@ -8,6 +8,10 @@ Gorm文档: [Gorm文档](https://gorm.io/zh_CN/docs/)
 
 gRPC文档: [gRPC文档](https://grpc.io/docs/languages/go/)
 
+项目方案说明：[项目方案说明](https://bytedance.feishu.cn/docs/doccnKrCsU5Iac6eftnFBdsXTof#6QCRJV)
+
+石墨文档：[石墨文档](https://shimo.im/docs/KlkKVw9Zm8sNZ2qd)
+
 ## 功能简介
 
 接口功能不完善，仅作为示例
