@@ -1,15 +1,78 @@
 package controller
 
 import (
+	"bufio"
+	"context"
 	"database/sql"
 	"fmt"
+	"io"
+	"net"
+	"os"
 	"sync/atomic"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/ssh"
 )
 
+type ViaSSHDialer struct {
+	client *ssh.Client
+}
+
+func (sself *ViaSSHDialer) Dial(context context.Context, addr string) (net.Conn, error) {
+	return sself.client.Dial("tcp", addr)
+}
+
+func GetKey() (account string, password string) {
+	filePath := "./key.txt"
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Println("get key fail", err)
+	}
+	//关闭file句柄
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+	i := 1
+	for {
+		str, err := reader.ReadString('\n')
+		if err == io.EOF {
+			password = str
+			break
+		}
+		if i == 1 {
+			account = str
+		}
+		i++
+	}
+	account = account[:len(account)-2]
+	return account, password
+}
+
+func InitSsh() {
+	account, password := GetKey()
+	// 一个ClientConfig指针,指向的对象需要包含ssh登录的信息
+	config := &ssh.ClientConfig{
+		User: account, //用户名
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password), //密码
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //服务端验证
+	}
+	client, err := ssh.Dial("tcp", "60.255.139.184:20022", config)
+
+	if err != nil {
+		panic("connection errror") //抛出异常
+	}
+
+	mysql.RegisterDialContext("mysql+tcp", (&ViaSSHDialer{client}).Dial)
+}
+
 func InitDB() (db *sql.DB, err error) {
-	dsn := "root:123456@tcp(127.0.0.1:3306)/douyin?charset=utf8mb4&parseTime=true"
+
+	InitSsh()
+
+	dsn := "root@mysql+tcp(127.0.0.1:3306)/douyin?charset=utf8mb4&parseTime=True"
+
 	db, err = sql.Open("mysql", dsn)
 
 	if err != nil {
@@ -91,7 +154,7 @@ func Insert(username string, password string, userIdSequence int64) (err error) 
 	defer db.Close()
 
 	atomic.AddInt64(&userIdSequence, 1) //用户ID安全的自增1
-	sqlStr := "INSERT INTO user(ID, name, follow_num, fans_num, password, sex, token) VALUES (?, ?, 0, 0, ?, 'male', ?);"
+	sqlStr := "INSERT INTO user(ID, name, follow_num, fans_num, password, sex, token, other) VALUES (?, ?, 0, 0, ?, 'male', ?, '');"
 	_, err = db.Exec(sqlStr, userIdSequence, username, password, username+password)
 	if err != nil { //插入失败
 		return err
@@ -111,7 +174,7 @@ func Query_token(str string) (user User, err error) { // 查找token是否存在
 
 	var tem string
 
-	err = db.QueryRow(sqlStr, str).Scan(&user.Id,&user.Name,&user.FollowCount,&user.FollowerCount, &tem)
+	err = db.QueryRow(sqlStr, str).Scan(&user.Id, &user.Name, &user.FollowCount, &user.FollowerCount, &tem)
 
 	return user, err
 }
