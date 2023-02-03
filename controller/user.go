@@ -33,6 +33,7 @@ type UserResponse struct {
 	User User `json:"user"`
 }
 
+// 注册函数
 func Register(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password") // 读取用户给定的账号密码
@@ -60,6 +61,7 @@ func Register(c *gin.Context) {
 	}
 }
 
+// 用户登录
 func Login(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
@@ -79,6 +81,7 @@ func Login(c *gin.Context) {
 	}
 }
 
+// 添加新用户
 func UserInfo(c *gin.Context) {
 	token := c.Query("token")
 
@@ -92,7 +95,7 @@ func UserInfo(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, UserResponse{
 			Response: Response{StatusCode: 0},
-			User : user,
+			User:     user,
 		})
 	}
 }
