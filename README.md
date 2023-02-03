@@ -26,3 +26,9 @@ test 目录下为不同场景的功能测试case，可用于验证功能实现�
 其中 common.go 中的 _serverAddr_ 为服务部署的地址，默认为本机地址，可以根据实际情况修改
 
 测试数据写在 demo_data.go 中，用于列表接口的 mock 测试
+
+## 文件结构
+
+controlller里面存储的是我们的接口文件，包括我们的实现文件
+
+service存在着我们的服务器之类的文件，并且其中的middleware存储的是我们的组件内容
