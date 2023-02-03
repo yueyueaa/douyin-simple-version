@@ -1,9 +1,9 @@
 package service
 
 import (
+	"douyin-simple-version/controller"
 	"encoding/json"
 	"fmt"
-	"github.com/RaymondCode/simple-demo/controller"
 	"io"
 	"net"
 	"sync"
@@ -42,7 +42,6 @@ func process(conn net.Conn) {
 			fmt.Printf("Read message failed: %v\n", err)
 			continue
 		}
-
 		var event = controller.MessageSendEvent{}
 		_ = json.Unmarshal(buf[:n], &event)
 		fmt.Printf("Receive Message：%+v\n", event)
