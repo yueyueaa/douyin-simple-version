@@ -1,9 +1,9 @@
 package test
 
 import (
+	"douyin-simple-version/controller"
 	"encoding/json"
 	"fmt"
-	"github.com/RaymondCode/simple-demo/controller"
 	"io"
 	"net"
 	"testing"
