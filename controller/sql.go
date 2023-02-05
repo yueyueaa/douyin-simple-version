@@ -91,3 +91,18 @@ func Query_token(str string) (user User, err error) {
 
 	return user, err
 }
+
+// 查找feeds流
+func Query_feeds(feeds *[]Video) (err error) {
+	db, err := middleware.InitDB() // 初始化数据库
+
+	if err != nil {
+		fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
+		return
+	}
+	defer db.Close()
+
+	// todo
+
+	return err
+}
