@@ -7,11 +7,11 @@ import (
 )
 
 // 验证登录用户的账户密码是否正确
-func QuerytoLogin(username string, password string) (flag bool, userid int64) {
+func Query_login(username string, password string) (flag bool, userid int64) {
 	db, err := middleware.InitDB() // 初始化数据库
 
 	if err != nil {
-		fmt.Printf("QuerytoLogin DB ERROR ----， %v", err)
+		fmt.Printf("[DB ERR] Query_login\t%v\n", err)
 		return
 	}
 	defer db.Close()
@@ -33,7 +33,6 @@ func QuerytoLogin(username string, password string) (flag bool, userid int64) {
 	} else {
 		return flag, userid
 	}
-
 }
 
 // 查找对应的账号是否存在
@@ -41,7 +40,7 @@ func Query_account(str string) (err error) {
 	db, err := middleware.InitDB() // 初始化数据库
 
 	if err != nil {
-		fmt.Printf("Query_account DB ERROR ----， %v", err)
+		fmt.Printf("[DB ERR] Query_account\t%v\n", err)
 		return
 	}
 	defer db.Close()
@@ -56,11 +55,11 @@ func Query_account(str string) (err error) {
 }
 
 // 插入新用户
-func Insert(username string, password string, userIdSequence int64) (err error) {
+func Insert_newuser(username string, password string, userIdSequence int64) (err error) {
 	db, err := middleware.InitDB() // 初始化数据库
 
 	if err != nil {
-		fmt.Printf("Insert DB ERROR ----， %v", err)
+		fmt.Printf("[DB ERR] Insert_newuser\t%v\n", err)
 		return
 	}
 	defer db.Close()
@@ -79,7 +78,7 @@ func Query_token(str string) (user User, err error) {
 	db, err := middleware.InitDB() // 初始化数据库
 
 	if err != nil {
-		fmt.Printf("Query_token DB ERROR ----， %v", err)
+		fmt.Printf("[DB ERR] Query_token\t%v\n", err)
 		return
 	}
 	defer db.Close()

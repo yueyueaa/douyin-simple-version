@@ -45,7 +45,7 @@ func Register(c *gin.Context) {
 			Response: Response{StatusCode: 1, StatusMsg: "User already exist"},
 		})
 	} else {
-		err = Insert(username, password, userIdSequence)
+		err = Insert_newuser(username, password, userIdSequence)
 		if err != nil { // 注册失败
 			c.JSON(http.StatusOK, UserLoginResponse{
 				Response: Response{StatusCode: 1, StatusMsg: "Register Fail"},
@@ -68,7 +68,7 @@ func Login(c *gin.Context) {
 
 	token := username + password
 
-	if exist, userid := QuerytoLogin(username, password); exist {
+	if exist, userid := Query_login(username, password); exist {
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 0},
 			UserId:   userid,
