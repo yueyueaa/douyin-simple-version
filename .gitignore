@@ -1,3 +1,4 @@
 *.txt
 *.exe
 simple-demo*
+/config/config.go
