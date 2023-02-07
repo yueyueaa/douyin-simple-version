@@ -102,7 +102,40 @@ func Query_feeds(feeds *[]Video) (err error) {
 	}
 	defer db.Close()
 
-	// todo
+	var maxID int64
+	err = db.QueryRow("SELECT MAX(ID) FROM video_info").Scan(&maxID)
+
+	if err != nil {
+		fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
+		return
+	}
+	defer db.Close()
+
+	var tempVideo Video
+
+	var i int64
+	for i = 0; (i < 30) && (maxID-i > 0); i++ {
+		tempVideo.Id = maxID - i
+		tempVideo.IsFavorite = false
+
+		// 查询视频基本信息
+		err = db.QueryRow("SELECT author,like_num,comment_num FROM video_info WHERE ID = ?", tempVideo.Id).Scan(&tempVideo.Author.Name, &tempVideo.FavoriteCount, &tempVideo.CommentCount)
+		if err != nil {
+			fmt.Printf("[DB ERR] Query_feeds_info\t%v\n", err)
+			return
+		}
+		defer db.Close()
+
+		// 查询视频url信息
+		err = db.QueryRow("SELECT play_url,cover_url FROM video_url WHERE ID = ?", tempVideo.Id).Scan(&tempVideo.PlayUrl, &tempVideo.CoverUrl)
+		if err != nil {
+			fmt.Printf("[DB ERR] Query_feeds_url\t%v\n", err)
+			return
+		}
+		defer db.Close()
+
+		*feeds = append(*feeds, tempVideo)
+	}
 
 	return err
 }
