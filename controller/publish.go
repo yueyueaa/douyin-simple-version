@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"douyin-simple-version/service/middleware"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"path/filepath"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 type VideoListResponse struct {
@@ -50,10 +53,50 @@ func Publish(c *gin.Context) {
 
 // PublishList all users have same publish video list
 func PublishList(c *gin.Context) {
+	userId, _ := strconv.ParseInt(c.Query("user_id"), 10, 64)
+	token := c.Query("token")
+	user, exist := usersLoginInfo[token]
+	if !exist || user.Id != userId {
+		return
+	}
+	var videos []Video
+	db, err := middleware.InitDB()
+	if err != nil {
+		return
+	}
+	rows, err := db.Raw("SELECT VID,like_num,comment_num,title FROM video_info WHERE author = ?", user.Id).Rows()
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var vid, like_num, comment_num int64
+		var play_url, cover_url, title string
+		var isFavorite int
+		rows.Scan(&vid, &like_num, &comment_num, &title)
+		//查找对应视频url
+		err := db.Raw("SELECT play_url,cover_url FROM video_url WHERE VID = ?", vid).Row().Scan(&play_url, &cover_url)
+		if err != nil {
+			return
+		}
+		//查找点赞信息
+		err = db.Raw("SELECT flag FROM likes WHERE VID = ? AND UID = ?", vid, user.Id).Row().Scan(&isFavorite)
+		if err != nil {
+			isFavorite=0
+		}
+		videos = append(videos, Video{
+			vid,
+			user,
+			play_url,
+			cover_url,
+			like_num,
+			comment_num,
+			isFavorite != 0,
+		})
+	}
 	c.JSON(http.StatusOK, VideoListResponse{
 		Response: Response{
 			StatusCode: 0,
 		},
-		VideoList: DemoVideos,
+		VideoList: videos,
 	})
 }
