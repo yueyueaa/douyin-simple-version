@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"crypto/md5"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,8 +22,6 @@ var usersLoginInfo = map[string]User{
 	},
 }
 
-var userIdSequence = int64(1)
-
 type UserLoginResponse struct {
 	Response
 	UserId int64  `json:"user_id,omitempty"`
@@ -33,31 +33,40 @@ type UserResponse struct {
 	User User `json:"user"`
 }
 
+func Token_md5(str string) string {
+	data := []byte(str)
+	has := md5.Sum(data)
+	md5str := fmt.Sprintf("%x", has)
+	return md5str
+}
+
 // 注册函数
 func Register(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password") // 读取用户给定的账号密码
 
-	err := Query_account(username)
+	flag := Query_account(username)
 
-	if err == nil { //用户已经存在的情况
+	if flag  { //用户已经存在的情况
 		c.JSON(http.StatusOK, UserLoginResponse{
 			Response: Response{StatusCode: 1, StatusMsg: "User already exist"},
 		})
 	} else {
-		err = Insert_newuser(username, password, userIdSequence)
-		if err != nil { // 注册失败
-			c.JSON(http.StatusOK, UserLoginResponse{
-				Response: Response{StatusCode: 1, StatusMsg: "Register Fail"},
-			})
-			return
-		}
+		userinfo := Insert_newuser(username, password)
+		token := Token_md5(fmt.Sprintf("%d", userinfo.Uid))
 		//注册完成
 		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 0},
-			UserId:   userIdSequence,
-			Token:    username + password,
+			Response: Response{StatusCode: 0, StatusMsg: "Sucessful Register"},
+			UserId:   int64(userinfo.Uid),
+			Token:    token,
 		})
+
+		usersLoginInfo[token] = User{
+			Id:            int64(userinfo.Uid),
+			Name:          userinfo.Name,
+			FollowCount:   int64(userinfo.FollowCount),
+			FollowerCount: int64(userinfo.FollowerCount),
+		}
 	}
 }
 
@@ -66,17 +75,30 @@ func Login(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	token := username + password
+	if exist, userinfo := Query_login(username, password); exist == 1 {
 
-	if exist, userid := Query_login(username, password); exist {
+		token := Token_md5(fmt.Sprintf("%d", userinfo.Uid))
+
 		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 0},
-			UserId:   userid,
+			Response: Response{StatusCode: 0, StatusMsg: "Successful Login"},
+			UserId:   int64(userinfo.Uid),
 			Token:    token,
+		})
+
+		usersLoginInfo[token] = User{
+			Id:            int64(userinfo.Uid),
+			Name:          userinfo.Name,
+			FollowCount:   int64(userinfo.FollowCount),
+			FollowerCount: int64(userinfo.FollowerCount),
+		}
+
+	} else if exist == 0 {
+		c.JSON(http.StatusOK, UserLoginResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "Password is wrong"},
 		})
 	} else {
 		c.JSON(http.StatusOK, UserLoginResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
+			Response: Response{StatusCode: 1, StatusMsg: "user not exist"},
 		})
 	}
 }
@@ -85,17 +107,15 @@ func Login(c *gin.Context) {
 func UserInfo(c *gin.Context) {
 	token := c.Query("token")
 
-	var user User
-
-	user, err := Query_token(token)
-	if err != nil {
-		c.JSON(http.StatusOK, UserResponse{
-			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
-		})
-	} else {
+	if user, exist := usersLoginInfo[token]; exist {
 		c.JSON(http.StatusOK, UserResponse{
 			Response: Response{StatusCode: 0},
 			User:     user,
 		})
+	} else {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
+		})
+
 	}
 }
