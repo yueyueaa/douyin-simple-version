@@ -3,139 +3,123 @@ package controller
 import (
 	"douyin-simple-version/service/middleware"
 	"fmt"
-	"sync/atomic"
 )
 
 // 验证登录用户的账户密码是否正确
-func Query_login(username string, password string) (flag bool, userid int64) {
+func Query_login(username string, password string) (status int64, userinfo middleware.User_info) {
+	//status -1 用户不存在   0 密码错误  1 成功
 	db, err := middleware.InitDB() // 初始化数据库
 
 	if err != nil {
 		fmt.Printf("[DB ERR] Query_login\t%v\n", err)
 		return
 	}
-	defer db.Close()
-
-	var name_in_database, password_in_database string
-
-	sqlStr := "select name, password, ID from user where name= ?" //构造查询的sql语句
-
-	err = db.QueryRow(sqlStr, username).Scan(&name_in_database, &password_in_database, &userid)
-
-	if err != nil {
-		flag = false
-	} else {
-		flag = true
+	var (
+		user middleware.User
+	)
+	db.Select([]string{"UID", "name", "FollowCount", "FollowerCount"}).Where("name = ?", username).Take(&userinfo)
+	if userinfo.Uid == 0 {
+		status = -1
+		return status, userinfo
 	}
-
-	if password == password_in_database {
-		return flag, userid
+	db.Select("password").Where("UID = ?", userinfo.Uid).Take(&user)
+	if user.Password != password {
+		return 0, userinfo
 	} else {
-		return flag, userid
+		return 1, userinfo
 	}
 }
 
-// 查找对应的账号是否存在
-func Query_account(str string) (err error) {
+// 根据username查找对应的账号是否存在
+func Query_account(str string) (flag bool) {
 	db, err := middleware.InitDB() // 初始化数据库
 
 	if err != nil {
 		fmt.Printf("[DB ERR] Query_account\t%v\n", err)
-		return
+		return true
 	}
-	defer db.Close()
 
-	sqlStr := "select name from user where name=?" //构造查询的sql语句
+	sqlStr := "select name from user_info where name=?" //构造查询的sql语句
 
-	var tem string
+	var userinfo middleware.User_info
 
-	err = db.QueryRow(sqlStr, str).Scan(&tem)
+	db.Raw(sqlStr, str).Scan(&userinfo)
 
-	return err
+	if userinfo.Name == str {
+		return true
+	} else {
+		return false
+	}
 }
 
 // 插入新用户
-func Insert_newuser(username string, password string, userIdSequence int64) (err error) {
+func Insert_newuser(username string, password string) (userinfo middleware.User_info) {
 	db, err := middleware.InitDB() // 初始化数据库
 
 	if err != nil {
 		fmt.Printf("[DB ERR] Insert_newuser\t%v\n", err)
 		return
 	}
-	defer db.Close()
-
-	atomic.AddInt64(&userIdSequence, 1) //用户ID安全的自增1
-	sqlStr := "INSERT INTO user(ID, name, follow_num, fans_num, password, sex, token, other) VALUES (?, ?, 0, 0, ?, 'male', ?, '');"
-	_, err = db.Exec(sqlStr, userIdSequence, username, password, username+password)
-	if err != nil { //插入失败
-		return err
+	user := middleware.User{
+		Password: password,
 	}
-	return nil
-}
-
-// 查找token是否存在
-func Query_token(str string) (user User, err error) {
-	db, err := middleware.InitDB() // 初始化数据库
-
-	if err != nil {
-		fmt.Printf("[DB ERR] Query_token\t%v\n", err)
-		return
+	userinfo = middleware.User_info{
+		Name:          username,
+		FollowCount:   0,
+		FollowerCount: 0,
 	}
-	defer db.Close()
 
-	sqlStr := "select ID, name, follow_num, fans_num, token from user where token=?" //构造查询的sql语句
+	db.Create(&userinfo)
+	user.Uid = userinfo.Uid//获取自增主键
+	db.Create(&user)
 
-	var tem string
-
-	err = db.QueryRow(sqlStr, str).Scan(&user.Id, &user.Name, &user.FollowCount, &user.FollowerCount, &tem)
-
-	return user, err
+	return userinfo
 }
 
 // 查找feeds流
 func Query_feeds(feeds *[]Video) (err error) {
-	db, err := middleware.InitDB() // 初始化数据库
+	// db, err := middleware.InitDB() // 初始化数据库
 
-	if err != nil {
-		fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
-		return
-	}
-	defer db.Close()
+	// if err != nil {
+	// 	fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
+	// 	return
+	// }
+	// // defer db.Close()
 
-	var maxID int64
-	err = db.QueryRow("SELECT MAX(ID) FROM video_info").Scan(&maxID)
+	// var maxID int64
+	// err = db.QueryRow("SELECT MAX(ID) FROM video_info").Scan(&maxID)
 
-	if err != nil {
-		fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
-		return
-	}
-	defer db.Close()
+	// if err != nil {
+	// 	fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
+	// 	return
+	// }
+	// // defer db.Close()
 
-	var tempVideo Video
+	// var tempVideo Video
 
-	var i int64
-	for i = 0; (i < 30) && (maxID-i > 0); i++ {
-		tempVideo.Id = maxID - i
-		tempVideo.IsFavorite = false
+	// var i int64
+	// for i = 0; (i < 30) && (maxID-i > 0); i++ {
+	// 	tempVideo.Id = maxID - i
+	// 	tempVideo.IsFavorite = false
 
-		// 查询视频基本信息
-		err = db.QueryRow("SELECT author,like_num,comment_num FROM video_info WHERE ID = ?", tempVideo.Id).Scan(&tempVideo.Author.Name, &tempVideo.FavoriteCount, &tempVideo.CommentCount)
-		if err != nil {
-			fmt.Printf("[DB ERR] Query_feeds_info\t%v\n", err)
-			return
-		}
-		defer db.Close()
+	// 	// 查询视频基本信息
+	// 	err = db.QueryRow("SELECT author,like_num,comment_num FROM video_info WHERE ID = ?", tempVideo.Id).Scan(&tempVideo.Author.Name, &tempVideo.FavoriteCount, &tempVideo.CommentCount)
+	// 	if err != nil {
+	// 		fmt.Printf("[DB ERR] Query_feeds_info\t%v\n", err)
+	// 		return
+	// 	}
+	// 	// defer db.Close()
 
-		// 查询视频url信息
-		err = db.QueryRow("SELECT play_url,cover_url FROM video_url WHERE ID = ?", tempVideo.Id).Scan(&tempVideo.PlayUrl, &tempVideo.CoverUrl)
-		if err != nil {
-			fmt.Printf("[DB ERR] Query_feeds_url\t%v\n", err)
-			return
-		}
-		defer db.Close()
+	// 	// 查询视频url信息
+	// 	err = db.QueryRow("SELECT play_url,cover_url FROM video_url WHERE ID = ?", tempVideo.Id).Scan(&tempVideo.PlayUrl, &tempVideo.CoverUrl)
+	// 	if err != nil {
+	// 		fmt.Printf("[DB ERR] Query_feeds_url\t%v\n", err)
+	// 		return
+	// 	}
+	// 	// defer db.Close()
 
-		*feeds = append(*feeds, tempVideo)
-	}
+	// 	*feeds = append(*feeds, tempVideo)
+	// }
 
 	return err
 }
