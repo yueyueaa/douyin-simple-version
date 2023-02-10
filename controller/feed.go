@@ -15,9 +15,7 @@ type FeedResponse struct {
 
 // Feed same demo video list for every request
 func Feed(c *gin.Context) {
-	var feeds []Video
-
-	Query_feeds(&feeds)
+	feeds := Query_feeds(c.Query("token"))
 
 	c.JSON(http.StatusOK, FeedResponse{
 		Response:  Response{StatusCode: 0},

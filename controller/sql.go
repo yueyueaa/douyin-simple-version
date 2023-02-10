@@ -70,56 +70,80 @@ func Insert_newuser(username string, password string) (userinfo middleware.User_
 	}
 
 	db.Create(&userinfo)
-	user.Uid = userinfo.Uid//获取自增主键
+	user.Uid = userinfo.Uid //获取自增主键
 	db.Create(&user)
 
 	return userinfo
 }
 
 // 查找feeds流
-func Query_feeds(feeds *[]Video) (err error) {
-	// db, err := middleware.InitDB() // 初始化数据库
+func Query_feeds(token string) (feeds []Video) {
+	db, err := middleware.InitDB() // 初始化数据库
 
-	// if err != nil {
-	// 	fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
-	// 	return
-	// }
-	// // defer db.Close()
+	if err != nil {
+		fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
+		return
+	}
 
-	// var maxID int64
-	// err = db.QueryRow("SELECT MAX(ID) FROM video_info").Scan(&maxID)
+	var video_info middleware.Video_info
+	var author_info middleware.User_info
+	var url_info middleware.Video_url
+	var follow_info middleware.Follow
+	var favorite_info middleware.Like
 
-	// if err != nil {
-	// 	fmt.Printf("[DB ERR] Query_feeds\t%v\n", err)
-	// 	return
-	// }
-	// // defer db.Close()
+	db.Last(&video_info)
+	maxID := video_info.VID
 
-	// var tempVideo Video
+	var tempVideo Video
+	var tempAuthor User
 
-	// var i int64
-	// for i = 0; (i < 30) && (maxID-i > 0); i++ {
-	// 	tempVideo.Id = maxID - i
-	// 	tempVideo.IsFavorite = false
+	for i := 0; (i < 30) && (int(maxID)-i > 0); i++ {
+		tempVideo.Id = int64(maxID) - int64(i)
 
-	// 	// 查询视频基本信息
-	// 	err = db.QueryRow("SELECT author,like_num,comment_num FROM video_info WHERE ID = ?", tempVideo.Id).Scan(&tempVideo.Author.Name, &tempVideo.FavoriteCount, &tempVideo.CommentCount)
-	// 	if err != nil {
-	// 		fmt.Printf("[DB ERR] Query_feeds_info\t%v\n", err)
-	// 		return
-	// 	}
-	// 	// defer db.Close()
+		db.Find(&video_info, tempVideo.Id)
+		tempAuthor.Id = int64(video_info.Author)
+		tempVideo.FavoriteCount = int64(video_info.LikeNum)
+		tempVideo.CommentCount = int64(video_info.CommentNum)
 
-	// 	// 查询视频url信息
-	// 	err = db.QueryRow("SELECT play_url,cover_url FROM video_url WHERE ID = ?", tempVideo.Id).Scan(&tempVideo.PlayUrl, &tempVideo.CoverUrl)
-	// 	if err != nil {
-	// 		fmt.Printf("[DB ERR] Query_feeds_url\t%v\n", err)
-	// 		return
-	// 	}
-	// 	// defer db.Close()
+		// Author
+		{
+			db.Find(&author_info, tempAuthor.Id)
+			tempAuthor.FollowCount = int64(author_info.FollowCount)
+			tempAuthor.FollowerCount = int64(author_info.FollowerCount)
+			tempAuthor.Name = author_info.Name
+		}
 
-	// 	*feeds = append(*feeds, tempVideo)
-	// }
+		// crr User info
+		{
+			UID := usersLoginInfo[token].Id
+			// Follow
+			{
+				err := db.Where("Follow_ID = ?", tempAuthor.Id).Find(&follow_info, UID)
 
-	return err
+				if err != nil {
+					tempAuthor.IsFollow = false
+				} else {
+					tempAuthor.IsFollow = true
+				}
+			}
+
+			// Like
+			{
+				err := db.Where("UID = ?", UID).Find(&favorite_info, tempVideo.Id)
+				if (err != nil) || (favorite_info.Flag == 0) {
+					tempVideo.IsFavorite = false
+				} else {
+					tempVideo.IsFavorite = true
+				}
+			}
+		}
+
+		db.Find(&url_info, tempVideo.Id)
+		tempVideo.CoverUrl = url_info.CoverUrl
+		tempVideo.PlayUrl = url_info.PlayUrl
+
+		feeds = append(feeds, tempVideo)
+	}
+
+	return feeds
 }
