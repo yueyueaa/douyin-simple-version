@@ -48,7 +48,7 @@ type Video_info struct {
 	PlayNum     uint      `gorm:"type:INTEGER"`
 	LikeNum     uint      `gorm:"type:INTEGER"`
 	PublishTime time.Time `gorm:"type:timestamp"`
-	Author      string    `gorm:"type:VARCHAR(255)"`
+	Author      uint      `gorm:"type:VARCHAR(255)"`
 	CommentNum  uint      `gorm:"type:INTEGER"`
 }
 
