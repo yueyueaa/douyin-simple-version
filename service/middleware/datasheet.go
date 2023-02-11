@@ -64,10 +64,15 @@ type Like struct {
 	Flag int32 `gorm:"type:INTEGER"`
 }
 type Comment struct {
+	CID         uint      `gorm:"column:CID;type:INT PRIMARY KEY AUTO_INCREMENT;primaryKey"`
 	VID         uint      `gorm:"column:VID;type:INT NOT NULL"`
 	UID         uint      `gorm:"column:UID;type:INT NOT NULL"`
 	CommentText string    `gorm:"type:VARCHAR(512)"`
 	CommentTime time.Time `gorm:"type:timestamp"`
+}
+
+func (Comment) TableName() string {
+	return "comments"
 }
 
 // 用户对用户记录的信息
