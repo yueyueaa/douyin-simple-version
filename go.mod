@@ -47,7 +47,6 @@ require (
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0 // indirect
 	github.com/yudai/gojsondiff v1.0.0 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
-	go.starlark.net v0.0.0-20230128213706-3f75dec8e403
 	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
