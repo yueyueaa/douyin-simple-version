@@ -3,6 +3,8 @@ package controller
 import (
 	"douyin-simple-version/service/middleware"
 	"fmt"
+	"log"
+	"time"
 )
 
 // 验证登录用户的账户密码是否正确
@@ -146,4 +148,40 @@ func Query_feeds(token string) (feeds []Video) {
 	}
 
 	return feeds
+}
+
+func Insert_comments(userId, videoId uint, commentText string, createDate time.Time) error {
+	db, err := middleware.InitDB()
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	comment := middleware.Comment{
+		VID:         videoId,
+		UID:         userId,
+		CommentText: commentText,
+		CommentTime: createDate,
+	}
+	db.Create(&comment)
+
+	return nil
+}
+
+func Delete_comments(userId, videoId, commentId uint) error {
+	db, err := middleware.InitDB()
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	comment := middleware.Comment{
+		CID:		 commentId,
+		VID:         videoId,
+		UID:         userId,
+	}
+	db.Delete(&comment)
+
+	return nil
 }
