@@ -41,6 +41,7 @@ CREATE TABLE likes
 // 评论表
 CREATE TABLE comments
 (
+    CID INT PRIMARY KEY AUTO_INCREMENT,
     VID INT NOT NULL,
     UID INT NOT NULL,
     comment_text VARCHAR(512),
