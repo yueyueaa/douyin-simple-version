@@ -11,12 +11,12 @@ import (
 
 type CommentListResponse struct {
 	Response
-	CommentList []Comment `json:"comment_list,omitempty"`
+	CommentList []middleware.Comment `json:"comment_list,omitempty"`
 }
 
 type CommentActionResponse struct {
 	Response
-	Comment Comment `json:"comment,omitempty"`
+	Comment middleware.Comment `json:"comment,omitempty"`
 }
 
 // CommentAction no practical effect, just check if token is valid
@@ -36,11 +36,10 @@ func CommentAction(c *gin.Context) {
 				})
 			}
 			c.JSON(http.StatusOK, CommentActionResponse{Response: Response{StatusCode: 0},
-				Comment: Comment{
-					Id:         1,
-					User:       user,
-					Content:    commentText,
-					CreateDate: createDate.String(),
+				Comment: middleware.Comment{
+					VID:         uint(videoId),
+					CommentText: commentText,
+					CommentTime: createDate,
 				}})
 		}
 		c.JSON(http.StatusOK, Response{
@@ -72,6 +71,7 @@ func CommentAction(c *gin.Context) {
 func CommentList(c *gin.Context) {
 	videoId, _ := strconv.ParseInt(c.Query("video_id"), 10, 64)
 	token := c.Query("token")
+
 	user, exist := usersLoginInfo[token]
 	if !exist {
 		return
@@ -80,22 +80,23 @@ func CommentList(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	var comments []Comment
-	rows, err := db.Raw("SELECT CID, UID, CommentText, CommentTime FROM comments WHERE VID = ?", videoId).Rows()
+	rows, err := db.Raw("SELECT CID, UID, comment_text, comment_time FROM comments WHERE VID = ?", videoId).Rows()
 	if err != nil {
 		return
 	}
+	var comments []middleware.Comment
 	for rows.Next() {
 		var user_id, comment_id int64
 		var comment_text string
-		var comment_time string
+		var comment_time time.Time
 		rows.Scan(&comment_id, &user_id, &comment_text, &comment_time)
 
-		comments = append(comments, Comment{
-			comment_id,
-			user,
-			comment_text,
-			comment_time,
+		comments = append(comments, middleware.Comment{
+			CID:         uint(comment_id),
+			VID:         uint(videoId),
+			UID:         uint(user.Id),
+			CommentText: comment_text,
+			CommentTime: comment_time,
 		})
 	}
 

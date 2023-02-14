@@ -149,6 +149,7 @@ func Query_feeds(token string) (feeds []Video) {
 
 	return feeds
 }
+
 func Insert_comments(userId, videoId uint, commentText string, createDate time.Time) error {
 	db, err := middleware.InitDB()
 
