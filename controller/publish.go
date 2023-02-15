@@ -9,15 +9,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
+
 
 	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-
-	// "github.com/sirupsen/logrus"
 	"time"
-
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
@@ -167,10 +167,53 @@ func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context
 
 }
 func PublishList(c *gin.Context) {
+	userId, _ := strconv.ParseInt(c.Query("user_id"), 10, 64)
+	token := c.Query("token")
+	user, exist := usersLoginInfo[token]
+	if !exist || user.Id != userId {
+		return
+	}
+	var videos []Video
+	db, err := middleware.InitDB()
+	if err != nil {
+		return
+	}
+	//查找作者所有稿件信息
+	var video_infos []middleware.Video_info
+	err = db.Select("*").Where("author=?", user.Id).Find(&video_infos).Error
+	if err != nil {
+		return
+	}
+	for _, info := range video_infos {
+		var isFavorite int
+		var url middleware.Video_url
+		//查找对应视频url
+		err := db.Select("*").Where("VID=?", info.VID).Take(&url).Error
+		if err != nil {
+			return
+		}
+		//查找点赞信息
+		var like middleware.Like
+		err = db.Select("*").Where("VID=? AND UID=?", info.VID, user.Id).Take(&like).Error
+		if err != nil {
+			isFavorite = 0
+		} else {
+			isFavorite = int(like.Flag)
+		}
+		videos = append(videos, Video{
+			int64(info.VID),
+			user,
+			url.PlayUrl,
+			url.CoverUrl,
+			int64(info.LikeNum),
+			int64(info.CommentNum),
+			isFavorite != 0,
+		})
+	}
 	c.JSON(http.StatusOK, VideoListResponse{
 		Response: Response{
 			StatusCode: 0,
 		},
-		VideoList: DemoVideos,
+		VideoList: videos,
 	})
 }
