@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"douyin-simple-version/function"
+	"douyin-simple-version/public"
 	"net/http"
 	"time"
 
@@ -8,20 +10,27 @@ import (
 )
 
 type FeedResponse struct {
-	Response
-	VideoList []Video `json:"video_list,omitempty"`
-	NextTime  int64   `json:"next_time,omitempty"`
+	public.Response
+	VideoList []public.Video `json:"video_list,omitempty"`
+	NextTime  int64          `json:"next_time,omitempty"`
 }
 
 // Feed same demo video list for every request
 func Feed(c *gin.Context) {
-	feeds := Query_feeds(c.Query("token"))
+	token := c.Query("token")
 
-	c.JSON(http.StatusOK, FeedResponse{
-		Response:  Response{StatusCode: 0},
-		VideoList: feeds,
-		NextTime:  time.Now().Unix(),
-	})
+	if user, exits := usersLoginInfo[token]; exits {
+		feeds, status := function.Query_feeds(user, c)
+		c.JSON(http.StatusOK, FeedResponse{
+			Response:  status,
+			VideoList: feeds,
+			NextTime:  time.Now().Unix(),
+		})
+	} else {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: public.Response{StatusCode: 1, StatusMsg: "User doesn't login"},
+		})
+	}
 }
 
 /*

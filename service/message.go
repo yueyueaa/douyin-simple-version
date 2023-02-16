@@ -1,7 +1,7 @@
 package service
 
 import (
-	"douyin-simple-version/controller"
+	"douyin-simple-version/public"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,7 +42,7 @@ func process(conn net.Conn) {
 			fmt.Printf("Read message failed: %v\n", err)
 			continue
 		}
-		var event = controller.MessageSendEvent{}
+		var event = public.MessageSendEvent{}
 		_ = json.Unmarshal(buf[:n], &event)
 		fmt.Printf("Receive Message：%+v\n", event)
 
@@ -59,7 +59,7 @@ func process(conn net.Conn) {
 			continue
 		}
 
-		pushEvent := controller.MessagePushEvent{
+		pushEvent := public.MessagePushEvent{
 			FromUserId: event.UserId,
 			MsgContent: event.MsgContent,
 		}

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"douyin-simple-version/public"
 	"douyin-simple-version/service/middleware"
 	"fmt"
 	"log"
@@ -13,11 +14,9 @@ import (
 	"strings"
 	"time"
 
-
 	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"time"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
@@ -26,7 +25,7 @@ const (
 	VideoUrlPrefix = "http://" + Domain
 )
 
-func Insert_newvideo(Title string, Cover_Url string, Play_Url string, user_uid uint, publishdate time.Time) (err error) {
+func Insert_newvideo(Title string, Cover_Url string, Play_Url string, user_uid int64, publishdate time.Time) (err error) {
 	db, err := middleware.InitDB()
 	if err != nil {
 		fmt.Printf("[DB ERR] Insert_newuser\t%v\n", err)
@@ -37,28 +36,27 @@ func Insert_newvideo(Title string, Cover_Url string, Play_Url string, user_uid u
 		CoverUrl: Cover_Url,
 	}
 	publishvideo_info := middleware.Video_info{
-		Title:       Title,
-		PlayNum:     0,
-		LikeNum:     0,
-		PublishTime: publishdate,
-		Author:      user_uid,
-		CommentNum:  0,
+		Title:         Title,
+		AuthorID:      user_uid,
+		FavoriteCount: 0,
+		CommentCount:  0,
+		PublishTime:   publishdate,
 	}
 	db.Create(&publishvideo_info)
 	publishvideo_url.VID = publishvideo_info.VID
 	db.Create(&publishvideo_url)
 	return nil
 }
-func ErrorResponse(err error) Response {
-	return Response{
+func ErrorResponse(err error) public.Response {
+	return public.Response{
 		StatusCode: 1,
 		StatusMsg:  err.Error(),
 	}
 }
 
 type VideoListResponse struct {
-	Response
-	VideoList []Video `json:"video_list"`
+	public.Response
+	VideoList []public.Video `json:"video_list"`
 }
 type Error struct {
 	Msg string
@@ -78,7 +76,7 @@ func Publish(c *gin.Context) {
 	Title := c.PostForm("title")
 	data, err := c.FormFile("data")
 	if err != nil {
-		c.JSON(http.StatusOK, Response{
+		c.JSON(http.StatusOK, public.Response{
 			StatusCode: 1,
 			StatusMsg:  err.Error(),
 		})
@@ -114,7 +112,7 @@ func GetSnapshot(videoPath, snapshotPath string, frameNum int) (snapshotName str
 	snapshotName = names[len(names)-1] + ".png"
 	return
 }
-func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context) Response {
+func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context) public.Response {
 	//检查文件是否为空
 	if data == nil {
 		return ErrorResponse(Error{Msg: "empty data file"})
@@ -148,9 +146,9 @@ func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context
 		return ErrorResponse(err)
 	}
 	//生成基本信息
-	var author uint
+	var author int64
 	if user, exist := usersLoginInfo[token]; exist {
-		author = uint(user.Id)
+		author = user.Id
 	}
 	var CoverUrl string
 	// var authorid =12
@@ -160,7 +158,7 @@ func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context
 	if err != nil {
 		return ErrorResponse(err)
 	}
-	return Response{
+	return public.Response{
 		StatusCode: 0,
 		StatusMsg:  "success",
 	}
@@ -173,19 +171,19 @@ func PublishList(c *gin.Context) {
 	if !exist || user.Id != userId {
 		return
 	}
-	var videos []Video
+	var videos []public.Video
 	db, err := middleware.InitDB()
 	if err != nil {
 		return
 	}
 	//查找作者所有稿件信息
 	var video_infos []middleware.Video_info
-	err = db.Select("*").Where("author=?", user.Id).Find(&video_infos).Error
+	err = db.Select("*").Where("author_id=?", user.Id).Find(&video_infos).Error
 	if err != nil {
 		return
 	}
 	for _, info := range video_infos {
-		var isFavorite int
+		var isFavorite int64
 		var url middleware.Video_url
 		//查找对应视频url
 		err := db.Select("*").Where("VID=?", info.VID).Take(&url).Error
@@ -193,25 +191,25 @@ func PublishList(c *gin.Context) {
 			return
 		}
 		//查找点赞信息
-		var like middleware.Like
-		err = db.Select("*").Where("VID=? AND UID=?", info.VID, user.Id).Take(&like).Error
+		var favorite middleware.Favorite
+		err = db.Select("*").Where("VID=? AND UID=?", info.VID, user.Id).Find(&favorite).Error
 		if err != nil {
 			isFavorite = 0
 		} else {
-			isFavorite = int(like.Flag)
+			isFavorite = favorite.Flag
 		}
-		videos = append(videos, Video{
+		videos = append(videos, public.Video{
 			int64(info.VID),
 			user,
 			url.PlayUrl,
 			url.CoverUrl,
-			int64(info.LikeNum),
-			int64(info.CommentNum),
+			int64(info.FavoriteCount),
+			int64(info.CommentCount),
 			isFavorite != 0,
 		})
 	}
 	c.JSON(http.StatusOK, VideoListResponse{
-		Response: Response{
+		Response: public.Response{
 			StatusCode: 0,
 		},
 		VideoList: videos,

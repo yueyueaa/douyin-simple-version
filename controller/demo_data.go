@@ -1,6 +1,8 @@
 package controller
 
-var DemoVideos = []Video{
+import "douyin-simple-version/public"
+
+var DemoVideos = []public.Video{
 	{
 		Id:            1,
 		Author:        DemoUser,
@@ -12,7 +14,7 @@ var DemoVideos = []Video{
 	},
 }
 
-var DemoComments = []Comment{
+var DemoComments = []public.Comment{
 	{
 		Id:         1,
 		User:       DemoUser,
@@ -21,7 +23,7 @@ var DemoComments = []Comment{
 	},
 }
 
-var DemoUser = User{
+var DemoUser = public.User{
 	Id:            1,
 	Name:          "TestUser",
 	FollowCount:   0,

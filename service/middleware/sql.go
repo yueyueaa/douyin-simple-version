@@ -24,7 +24,6 @@ func (sself *ViaSSHDialer) Dial(context context.Context, addr string) (net.Conn,
 
 // 初始化数据库
 func InitDB() (db_gorm *gorm.DB, err error) {
-
 	var db *sql.DB
 
 	account, password := config.MySQLUser, config.MySQLPwd
@@ -68,7 +67,7 @@ func InitDB() (db_gorm *gorm.DB, err error) {
 	// )
 
 	gormDB, err := gorm.Open(mysql_gorm.New(mysql_gorm.Config{Conn: db}), &gorm.Config{
-		//		Logger: newLogger
+		// Logger: newLogger,
 	})
 	//去除62-69行，以及72行注释，可以进行sql语句可视化调试(即在控制台输出每一句执行的sql语句)
 
