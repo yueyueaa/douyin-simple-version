@@ -5,6 +5,7 @@ import (
 	"douyin-simple-version/public"
 	"douyin-simple-version/service/middleware"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -14,16 +15,96 @@ import (
 	"strings"
 	"time"
 
+	"path"
+
 	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/pkg/sftp"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
 	Domain         = "douyin.yoitsu-holo.top:20080/"
 	VideoUrlPrefix = "http://" + Domain
+	host           = ""
+	port           = 20022
+	username       = ""
+	password       = ""
 )
+
+func connect(user, password, host string, port int) (*sftp.Client, error) {
+	var (
+		auth         []ssh.AuthMethod
+		addr         string
+		clientConfig *ssh.ClientConfig
+		sshClient    *ssh.Client
+		sftpClient   *sftp.Client
+		err          error
+	)
+	// get auth method
+	auth = make([]ssh.AuthMethod, 0)
+	auth = append(auth, ssh.Password(password))
+	clientConfig = &ssh.ClientConfig{
+		User:            user,
+		Auth:            auth,
+		Timeout:         30 * time.Second,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //ssh.FixedHostKey(hostKey),
+	}
+	// connet to ssh
+	addr = fmt.Sprintf("%s:%d", host, port)
+	if sshClient, err = ssh.Dial("tcp", addr, clientConfig); err != nil {
+		return nil, err
+	}
+	// create sftp client
+	if sftpClient, err = sftp.NewClient(sshClient); err != nil {
+		return nil, err
+	}
+	return sftpClient, nil
+}
+
+func uploadFile(sftpClient *sftp.Client, localFilePath string, remotePath string) {
+	srcFile, err := os.Open(localFilePath)
+	if err != nil {
+		fmt.Println("os.Open error : ", localFilePath)
+		log.Fatal(err)
+	}
+	defer srcFile.Close()
+	var remoteFileName = path.Base(localFilePath)
+	dstFile, err := sftpClient.Create(path.Join(remotePath, remoteFileName))
+	if err != nil {
+		fmt.Println("sftpClient.Create error : ", path.Join(remotePath, remoteFileName))
+		log.Fatal(err)
+	}
+	defer dstFile.Close()
+	ff, err := ioutil.ReadAll(srcFile)
+	if err != nil {
+		fmt.Println("ReadAll error : ", localFilePath)
+		log.Fatal(err)
+	}
+	dstFile.Write(ff)
+	fmt.Println(localFilePath + " copy file to remote server finished!")
+}
+func DoBackup(host string, port int, userName string, password string, localPath string, remotePath string) {
+	var (
+		err        error
+		sftpClient *sftp.Client
+	)
+	start := time.Now()
+	sftpClient, err = connect(userName, password, host, port)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sftpClient.Close()
+	_, errStat := sftpClient.Stat(remotePath)
+	if errStat != nil {
+		log.Fatal(remotePath + " remote path not exists!")
+	}
+	uploadFile(sftpClient, localPath, remotePath)
+	elapsed := time.Since(start)
+	fmt.Println("elapsed time : ", elapsed)
+}
 
 func Insert_newvideo(Title string, Cover_Url string, Play_Url string, user_uid int64, publishdate time.Time) (publishvideo_info middleware.Video_info) {
 	db, err := middleware.InitDB()
@@ -148,18 +229,22 @@ func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context
 	//生成视频信息
 	PlayUrl := VideoUrlPrefix + videoFileName
 	//封面
-	_, err = GetSnapshot("./publish/"+videoFileName, "./publish/"+"-"+videoFileName, 1)
+	_, err = GetSnapshot("./publish/"+videoFileName, "./publish/"+"prc"+videoFileName, 1)
 	if err != nil {
 		return ErrorResponse(err)
 	}
 	//生成基本信息
 	// var author int64
-
+	//本地文件上传到服务器
 	var CoverUrl string
 	// var authorid =12
-	CoverUrl = VideoUrlPrefix + fileName + ".png"
+	CoverUrl = VideoUrlPrefix + "prc" + videoFileName + ".png"
 	publish_time := time.Now()
 	Insert_newvideo(Title, CoverUrl, PlayUrl, auth, publish_time)
+	DoBackup(host, port, username, password, "./publish/"+videoFileName, "/home/team/")
+	DoBackup(host, port, username, password, "./publish/"+"prc"+videoFileName+".png", "/home/team/")
+	fmt.Println("完成")
+	// cliConf.Upload("./publish/"+"-"+videoFileName, "/root")
 	if err != nil {
 		return ErrorResponse(err)
 	}
@@ -167,7 +252,6 @@ func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context
 		StatusCode: 0,
 		StatusMsg:  "success",
 	}
-
 }
 func PublishList(c *gin.Context) {
 	userId, _ := strconv.ParseInt(c.Query("user_id"), 10, 64)
