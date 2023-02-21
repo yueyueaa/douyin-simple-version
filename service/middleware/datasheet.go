@@ -29,7 +29,7 @@ func (User_info) TableName() string {
 // 视频信息
 // 视频表
 type Video_url struct {
-	VID      int64  `gorm:"column:VID;"`
+	VID      int64  `gorm:"column:VID"`
 	PlayUrl  string `gorm:"type:CHAR(255)"`
 	CoverUrl string `gorm:"type:CHAR(255)"`
 }
