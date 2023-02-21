@@ -29,7 +29,7 @@ func (User_info) TableName() string {
 // 视频信息
 // 视频表
 type Video_url struct {
-	VID      int64  `gorm:"column:VID"`
+	VID      int64  `gorm:"column:VID;"`
 	PlayUrl  string `gorm:"type:CHAR(255)"`
 	CoverUrl string `gorm:"type:CHAR(255)"`
 }
@@ -40,11 +40,11 @@ func (Video_url) TableName() string {
 
 type Video_info struct {
 	VID           int64     `gorm:"column:VID;type:INT PRIMARY KEY AUTO_INCREMENT;primaryKey"`
-	AuthorID      int64     `gorm:"type:INT"`
+	AuthorID      int64     `gorm:"column:author_id;type:INT"`
 	Title         string    `gorm:"type:VARCHAR(255)"`
-	FavoriteCount int64     `gorm:"type:INT"`
-	CommentCount  int64     `gorm:"type:INT"`
-	PublishTime   time.Time `gorm:"type:timestamp"`
+	FavoriteCount int64     `gorm:"column:favorite_count;type:INT"`
+	CommentCount  int64     `gorm:"column:comment_count;type:INT"`
+	PublishTime   time.Time `gorm:"column:publish_date;type:timestamp"`
 }
 
 func (Video_info) TableName() string {

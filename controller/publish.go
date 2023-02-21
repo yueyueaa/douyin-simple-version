@@ -21,23 +21,23 @@ import (
 )
 
 const (
-	Domain         = "douyin.yoitsu-holo.top:20080"
+	Domain         = "douyin.yoitsu-holo.top:20080/"
 	VideoUrlPrefix = "http://" + Domain
 )
 
-func Insert_newvideo(Title string, Cover_Url string, Play_Url string, user_uid int64, publishdate time.Time) (err error) {
+func Insert_newvideo(Title string, Cover_Url string, Play_Url string, user_uid int64, publishdate time.Time) (publishvideo_info middleware.Video_info) {
 	db, err := middleware.InitDB()
 	if err != nil {
-		fmt.Printf("[DB ERR] Insert_newuser\t%v\n", err)
+		fmt.Printf("[DB ERR] Insert_video\t%v\n", err)
 		return
 	}
 	publishvideo_url := middleware.Video_url{
 		PlayUrl:  Play_Url,
 		CoverUrl: Cover_Url,
 	}
-	publishvideo_info := middleware.Video_info{
-		Title:         Title,
+	publishvideo_info = middleware.Video_info{
 		AuthorID:      user_uid,
+		Title:         Title,
 		FavoriteCount: 0,
 		CommentCount:  0,
 		PublishTime:   publishdate,
@@ -45,7 +45,7 @@ func Insert_newvideo(Title string, Cover_Url string, Play_Url string, user_uid i
 	db.Create(&publishvideo_info)
 	publishvideo_url.VID = publishvideo_info.VID
 	db.Create(&publishvideo_url)
-	return nil
+	return publishvideo_info
 }
 func ErrorResponse(err error) public.Response {
 	return public.Response{
@@ -82,7 +82,14 @@ func Publish(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusOK, PublishFunc(token, Title, data, c))
+	if user, exist := usersLoginInfo[token]; exist {
+		author := user.Id
+		c.JSON(http.StatusOK, PublishFunc(token, Title, data, c, author))
+	} else {
+		c.JSON(http.StatusOK, UserResponse{
+			Response: public.Response{StatusCode: 1, StatusMsg: "User doesn't exist"},
+		})
+	}
 }
 func GetSnapshot(videoPath, snapshotPath string, frameNum int) (snapshotName string, err error) {
 
@@ -112,7 +119,7 @@ func GetSnapshot(videoPath, snapshotPath string, frameNum int) (snapshotName str
 	snapshotName = names[len(names)-1] + ".png"
 	return
 }
-func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context) public.Response {
+func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context, auth int64) public.Response {
 	//检查文件是否为空
 	if data == nil {
 		return ErrorResponse(Error{Msg: "empty data file"})
@@ -146,15 +153,13 @@ func PublishFunc(token, Title string, data *multipart.FileHeader, c *gin.Context
 		return ErrorResponse(err)
 	}
 	//生成基本信息
-	var author int64
-	if user, exist := usersLoginInfo[token]; exist {
-		author = user.Id
-	}
+	// var author int64
+
 	var CoverUrl string
 	// var authorid =12
-	CoverUrl = VideoUrlPrefix + videoFileName + ".png"
+	CoverUrl = VideoUrlPrefix + fileName + ".png"
 	publish_time := time.Now()
-	err = Insert_newvideo(Title, CoverUrl, PlayUrl, author, publish_time)
+	Insert_newvideo(Title, CoverUrl, PlayUrl, auth, publish_time)
 	if err != nil {
 		return ErrorResponse(err)
 	}
