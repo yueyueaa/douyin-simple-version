@@ -288,13 +288,14 @@ func PublishList(c *gin.Context) {
 			isFavorite = favorite.Flag
 		}
 		videos = append(videos, public.Video{
-			int64(info.VID),
-			user,
-			url.PlayUrl,
-			url.CoverUrl,
-			int64(info.FavoriteCount),
-			int64(info.CommentCount),
-			isFavorite != 0,
+			Id :int64(info.VID),
+			Author :user,
+			PlayUrl : url.PlayUrl,
+			CoverUrl : url.CoverUrl,
+			FavoriteCount : int64(info.FavoriteCount),
+			CommentCount : int64(info.CommentCount),
+			IsFavorite : isFavorite != 0,
+			Title : "sjx test",
 		})
 	}
 	c.JSON(http.StatusOK, VideoListResponse{

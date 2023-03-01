@@ -43,7 +43,7 @@ func InitDB() (db_gorm *gorm.DB, err error) {
 
 	mysql.RegisterDialContext("mysql+tcp", (&ViaSSHDialer{client}).Dial)
 
-	dsn := "root@mysql+tcp(127.0.0.1:3306)/douyin?charset=utf8mb4&parseTime=True"
+	dsn := "test:123456@mysql+tcp(127.0.0.1:3306)/douyin?charset=utf8mb4&parseTime=True"
 
 	db, err = sql.Open("mysql", dsn)
 
