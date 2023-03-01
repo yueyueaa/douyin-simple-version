@@ -24,7 +24,7 @@ func Feed(c *gin.Context) {
 		c.JSON(http.StatusOK, FeedResponse{
 			Response:  status,
 			VideoList: feeds,
-			NextTime:  time.Now().Unix(),
+			NextTime:  time.Now().Unix(), // **** \\
 		})
 	} else {
 		c.JSON(http.StatusOK, UserResponse{

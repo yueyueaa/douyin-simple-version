@@ -55,9 +55,9 @@ func Favorite_list(user public.User, c *gin.Context) (favoriteList []public.Vide
 	db.Model(&middleware.Favorite{}).Where("UID = ?", user.Id).Find(&favorites)
 
 	for _, favorite := range favorites {
-		tempFavorite, status := video_info(favorite.VID, favorite.VID)
-		if status.StatusCode != 0 {
-			return nil, status
+		tempFavorite, status := video_info(favorite.VID, favorite.UID)
+		if !status {
+			return nil, public.Response{StatusCode: 1}
 		}
 		favoriteList = append(favoriteList, tempFavorite)
 	}
